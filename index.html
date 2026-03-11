@@ -28,6 +28,70 @@
 </head>
 <body class="bg-gray-50 min-h-screen font-sans">
 
+  <!-- MODAL LOGIN / ROL -->
+  <div id="loginOverlay" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-7 fade-in">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        </div>
+        <div>
+          <h2 class="text-base font-bold text-gray-900">HTK Tracker</h2>
+          <p class="text-xs text-gray-400">Identificate para continuar</p>
+        </div>
+      </div>
+
+      <form onsubmit="iniciarSesion(event)" class="space-y-4">
+        <div>
+          <label class="text-xs font-medium text-gray-600 mb-1 block">Tu nombre</label>
+          <input id="loginNombre" type="text" required placeholder="Ej. Carolina" autocomplete="off"
+            class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+        </div>
+
+        <div>
+          <label class="text-xs font-medium text-gray-600 mb-1 block">Acceso</label>
+          <div class="grid grid-cols-3 gap-2">
+            <label class="cursor-pointer">
+              <input type="radio" name="loginRol" value="viewer" class="sr-only peer" checked />
+              <div class="border-2 border-gray-200 peer-checked:border-indigo-400 peer-checked:bg-indigo-50 rounded-xl p-3 text-center transition-all">
+                <svg class="w-5 h-5 mx-auto mb-1 text-gray-400 peer-checked:text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                <p class="text-xs font-medium text-gray-600">Viewer</p>
+                <p class="text-xs text-gray-400">Solo lectura</p>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="loginRol" value="editor" class="sr-only peer" onchange="togglePin(this)" />
+              <div class="border-2 border-gray-200 peer-checked:border-purple-400 peer-checked:bg-purple-50 rounded-xl p-3 text-center transition-all">
+                <svg class="w-5 h-5 mx-auto mb-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                <p class="text-xs font-medium text-gray-600">Editor</p>
+                <p class="text-xs text-gray-400">Editar</p>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="loginRol" value="admin" class="sr-only peer" onchange="togglePin(this)" />
+              <div class="border-2 border-gray-200 peer-checked:border-rose-400 peer-checked:bg-rose-50 rounded-xl p-3 text-center transition-all">
+                <svg class="w-5 h-5 mx-auto mb-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                <p class="text-xs font-medium text-gray-600">Admin</p>
+                <p class="text-xs text-gray-400">Total</p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div id="pinField" class="hidden">
+          <label class="text-xs font-medium text-gray-600 mb-1 block">PIN de acceso</label>
+          <input id="loginPin" type="password" maxlength="6" placeholder="••••••"
+            class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 tracking-widest text-center text-lg" />
+          <p id="pinError" class="text-xs text-red-500 mt-1 hidden">PIN incorrecto</p>
+        </div>
+
+        <button type="submit" class="w-full bg-indigo-600 text-white text-sm font-medium py-2.5 rounded-xl hover:bg-indigo-700 transition-colors">
+          Entrar →
+        </button>
+      </form>
+    </div>
+  </div>
+
   <!-- HEADER -->
   <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
     <div class="flex items-center gap-3">
@@ -47,6 +111,17 @@
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
       </button>
       <button onclick="irHoy()" class="text-xs bg-indigo-50 text-indigo-600 font-medium px-3 py-1.5 rounded-lg hover:bg-indigo-100">Hoy</button>
+      <!-- BADGE USUARIO -->
+      <div id="userBadge" class="flex items-center gap-2 pl-3 border-l border-gray-200">
+        <div id="userAvatar" class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"></div>
+        <div class="hidden sm:block">
+          <p id="userName" class="text-xs font-medium text-gray-700 leading-none"></p>
+          <p id="userRolLabel" class="text-xs text-gray-400 leading-none mt-0.5"></p>
+        </div>
+        <button onclick="cerrarSesion()" title="Cambiar usuario" class="p-1 rounded-lg hover:bg-gray-100 text-gray-400 ml-1">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        </button>
+      </div>
       <div class="flex items-center bg-gray-100 rounded-lg p-0.5">
         <button id="btnVistaDia" onclick="setVista('dia')" class="text-xs font-medium px-3 py-1.5 rounded-md transition-all bg-white text-gray-800 shadow-sm">Día</button>
         <button id="btnVistaSemana" onclick="setVista('semana')" class="text-xs font-medium px-3 py-1.5 rounded-md transition-all text-gray-500">Semana</button>
@@ -179,6 +254,73 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNudHdjYWFxb2F5bXd0ZHdvZ3p4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNzM5ODYsImV4cCI6MjA4ODc0OTk4Nn0.Bco-qyoDISfRej3ND-v_dtHWSOAr8EqjMnAmSkrGzi8'
     const { createClient } = supabase
     const db = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+    // ─── ROLES Y AUTH ──────────────────────────────────────────────────────────
+    const PINS = { admin: '1234', editor: '5678' }  // ← cambia estos PINs
+    const ROL_CONFIG = {
+      admin:  { label: 'Admin',  color: 'bg-rose-500',   canEdit: true,  canDelete: true,  canAdd: true  },
+      editor: { label: 'Editor', color: 'bg-purple-500', canEdit: true,  canDelete: false, canAdd: true  },
+      viewer: { label: 'Viewer', color: 'bg-gray-400',   canEdit: false, canDelete: false, canAdd: false },
+    }
+    let sesion = null  // { nombre, rol }
+
+    function togglePin(radio) {
+      const needs = ['admin','editor'].includes(radio.value)
+      document.getElementById('pinField').classList.toggle('hidden', !needs)
+      if (!needs) document.getElementById('loginPin').value = ''
+    }
+
+    function iniciarSesion(e) {
+      e.preventDefault()
+      const nombre = document.getElementById('loginNombre').value.trim()
+      const rol = document.querySelector('input[name="loginRol"]:checked').value
+      const pin = document.getElementById('loginPin').value
+
+      if (['admin','editor'].includes(rol) && pin !== PINS[rol]) {
+        document.getElementById('pinError').classList.remove('hidden')
+        document.getElementById('loginPin').value = ''
+        document.getElementById('loginPin').focus()
+        return
+      }
+
+      sesion = { nombre, rol }
+      localStorage.setItem('htk_sesion', JSON.stringify(sesion))
+      document.getElementById('loginOverlay').classList.add('hidden')
+      aplicarRol()
+      cargarDia()
+    }
+
+    function cerrarSesion() {
+      localStorage.removeItem('htk_sesion')
+      sesion = null
+      document.getElementById('loginOverlay').classList.remove('hidden')
+      document.getElementById('loginNombre').value = ''
+      document.getElementById('loginPin').value = ''
+      document.querySelector('input[name="loginRol"][value="viewer"]').checked = true
+      document.getElementById('pinField').classList.add('hidden')
+      document.getElementById('pinError').classList.add('hidden')
+    }
+
+    function aplicarRol() {
+      if (!sesion) return
+      const cfg = ROL_CONFIG[sesion.rol]
+
+      // Badge header
+      document.getElementById('userName').textContent = sesion.nombre
+      document.getElementById('userRolLabel').textContent = cfg.label
+      const av = document.getElementById('userAvatar')
+      av.textContent = sesion.nombre.charAt(0).toUpperCase()
+      av.className = `w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${cfg.color}`
+
+      // Ocultar botones según rol
+      document.querySelectorAll('.rol-add').forEach(el => el.style.display = cfg.canAdd ? '' : 'none')
+      document.querySelectorAll('.rol-edit').forEach(el => el.style.display = cfg.canEdit ? '' : 'none')
+      document.querySelectorAll('.rol-delete').forEach(el => el.style.display = cfg.canDelete ? '' : 'none')
+    }
+
+    function puedeEditar() { return sesion && ROL_CONFIG[sesion.rol].canEdit }
+    function puedeAgregar() { return sesion && ROL_CONFIG[sesion.rol].canAdd }
+    function puedeEliminar() { return sesion && ROL_CONFIG[sesion.rol].canDelete }
 
     // ─── ESTADO GLOBAL ─────────────────────────────────────────────────────────
     let fechaActual = new Date().toISOString().split('T')[0]
@@ -330,7 +472,7 @@
               <div class="flex items-center gap-3">
                 <span class="text-xs text-gray-400 font-mono">${b.hora_inicio.slice(0,5)} – ${b.hora_fin.slice(0,5)}</span>
                 <button onclick="abrirModal(${b.id}, ${b.area_id})"
-                  class="flex items-center gap-1 text-xs bg-white border ${cfg.border || 'border-gray-200'} text-gray-600 px-2.5 py-1.5 rounded-lg hover:shadow-sm transition font-medium">
+                  class="rol-add flex items-center gap-1 text-xs bg-white border ${cfg.border || 'border-gray-200'} text-gray-600 px-2.5 py-1.5 rounded-lg hover:shadow-sm transition font-medium">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                   Agregar
                 </button>
@@ -385,13 +527,13 @@
           <div class="flex items-center gap-1 shrink-0">
             ${a.prioridad === 'alta' ? '<span class="text-red-400 text-xs">🔴</span>' : ''}
             <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button onclick="abrirModalEditar(${a.id})" class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+              <button onclick="abrirModalEditar(${a.id})" class="rol-edit p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
               </button>
-              <button onclick="moverSiguienteDia(${a.id})" title="Mover al siguiente día" class="p-1.5 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-500">
+              <button onclick="moverSiguienteDia(${a.id})" title="Mover al siguiente día" class="rol-edit p-1.5 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-500">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
               </button>
-              <button onclick="eliminarActividad(${a.id})" class="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-400">
+              <button onclick="eliminarActividad(${a.id})" class="rol-delete p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-400">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
               </button>
             </div>
@@ -458,6 +600,7 @@
     // ─── GUARDAR ACTIVIDAD ─────────────────────────────────────────────────────
     async function guardarActividad(e) {
       e.preventDefault()
+      if (!puedeAgregar()) return mostrarToast('Sin permisos para esta acción')
       const id = document.getElementById('actividadId').value
       const bloqueId = document.getElementById('actividadBloqueId').value
       const areaId = document.getElementById('actividadAreaId').value
@@ -498,6 +641,7 @@
 
     // ─── ESTADOS ───────────────────────────────────────────────────────────────
     async function marcarCompletada(id, estado) {
+      if (!puedeEditar()) return mostrarToast('Sin permisos para esta acción')
       await db.from('actividades').update({ completada: estado }).eq('id', id)
       mostrarToast(estado ? '✅ Completada' : '⏳ Marcada como pendiente')
       cargarDia()
@@ -521,6 +665,7 @@
     }
 
     async function eliminarActividad(id) {
+      if (!puedeEliminar()) return mostrarToast('Sin permisos para esta acción')
       if (!confirm('¿Eliminar esta actividad?')) return
       await db.from('actividades').delete().eq('id', id)
       mostrarToast('Actividad eliminada')
@@ -745,7 +890,13 @@
     }
 
     // ─── INIT ──────────────────────────────────────────────────────────────────
-    cargarDia()
+    const sesionGuardada = localStorage.getItem('htk_sesion')
+    if (sesionGuardada) {
+      sesion = JSON.parse(sesionGuardada)
+      document.getElementById('loginOverlay').classList.add('hidden')
+      aplicarRol()
+      cargarDia()
+    }
   </script>
 </body>
 </html>
