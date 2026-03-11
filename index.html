@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HTK · Tracker Diario</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            clientes: '#3B82F6',
+            direccion: '#8B5CF6',
+            reclutamiento: '#10B981',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .fade-in { animation: fadeIn 0.2s ease-in; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    .drag-over { border: 2px dashed #6366f1 !important; background: #eef2ff; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+
+  <!-- HEADER -->
+  <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        </svg>
+      </div>
+      <h1 class="text-lg font-semibold text-gray-900">HTK Tracker</h1>
+    </div>
+    <div class="flex items-center gap-4">
+      <button onclick="cambiarFecha(-1)" class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <span id="fechaDisplay" class="text-sm font-medium text-gray-700 min-w-[140px] text-center"></span>
+      <button onclick="cambiarFecha(1)" class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+      </button>
+      <button onclick="irHoy()" class="text-xs bg-indigo-50 text-indigo-600 font-medium px-3 py-1.5 rounded-lg hover:bg-indigo-100">Hoy</button>
+      <div class="flex items-center bg-gray-100 rounded-lg p-0.5">
+        <button id="btnVistaDia" onclick="setVista('dia')" class="text-xs font-medium px-3 py-1.5 rounded-md transition-all bg-white text-gray-800 shadow-sm">Día</button>
+        <button id="btnVistaSemana" onclick="setVista('semana')" class="text-xs font-medium px-3 py-1.5 rounded-md transition-all text-gray-500">Semana</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- VISTA SEMANAL -->
+  <div id="vistaSemana" class="hidden max-w-5xl mx-auto px-4 pt-5 pb-2">
+    <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div class="grid grid-cols-5 divide-x divide-gray-100" id="semanaGrid">
+        <!-- generado por JS -->
+      </div>
+    </div>
+    <!-- Detalle del día seleccionado en vista semana -->
+    <div class="mt-4 space-y-3" id="semanaDetalle"></div>
+  </div>
+
+  <!-- RESUMEN DE ÁREAS -->
+  <div class="max-w-5xl mx-auto px-4 pt-5 pb-2">
+    <div class="grid grid-cols-3 gap-3" id="resumenAreas">
+      <!-- generado por JS -->
+    </div>
+  </div>
+
+  <!-- PENDIENTES ROLLOVER -->
+  <div class="max-w-5xl mx-auto px-4 pt-2" id="rolloverSection" style="display:none">
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-2">
+      <div class="flex items-center gap-2 mb-3">
+        <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span class="text-sm font-semibold text-amber-700">Pendientes de días anteriores</span>
+      </div>
+      <div id="rolloverList" class="space-y-2"></div>
+    </div>
+  </div>
+
+  <!-- BLOQUES -->
+  <main class="max-w-5xl mx-auto px-4 py-4 space-y-3" id="bloquesContainer">
+    <div class="text-center py-12 text-gray-400">
+      <svg class="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      Cargando bloques...
+    </div>
+  </main>
+
+  <!-- MODAL AGREGAR/EDITAR ACTIVIDAD -->
+  <div id="modalOverlay" class="fixed inset-0 bg-black/40 z-50 hidden" onclick="cerrarModal()">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div id="modalBox" class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 fade-in" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-5">
+          <h2 id="modalTitulo" class="text-base font-semibold text-gray-900">Nueva actividad</h2>
+          <button onclick="cerrarModal()" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <form id="formActividad" onsubmit="guardarActividad(event)" class="space-y-4">
+          <input type="hidden" id="actividadId" />
+          <input type="hidden" id="actividadBloqueId" />
+          <input type="hidden" id="actividadAreaId" />
+
+          <div>
+            <label class="text-xs font-medium text-gray-600 mb-1 block">Actividad *</label>
+            <input id="actividadTitulo" type="text" required placeholder="¿Qué hiciste o harás?" class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+          </div>
+
+          <div>
+            <label class="text-xs font-medium text-gray-600 mb-1 block">Descripción</label>
+            <textarea id="actividadDescripcion" rows="2" placeholder="Detalles adicionales..." class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"></textarea>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs font-medium text-gray-600 mb-1 block">Estado</label>
+              <select id="actividadEstado" class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                <option value="pendiente">⏳ Pendiente</option>
+                <option value="completada">✅ Completada</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-gray-600 mb-1 block">Prioridad</label>
+              <select id="actividadPrioridad" class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                <option value="media">Media</option>
+                <option value="alta">🔴 Alta</option>
+                <option value="baja">🟢 Baja</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs font-medium text-gray-600 mb-1 block">Notas / Comentarios</label>
+            <textarea id="actividadNotas" rows="2" placeholder="Observaciones, próximos pasos..." class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"></textarea>
+          </div>
+
+          <!-- ZONA DE EVIDENCIAS -->
+          <div>
+            <label class="text-xs font-medium text-gray-600 mb-1 block">Evidencias</label>
+            <div id="dropZone"
+              class="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+              onclick="document.getElementById('fileInput').click()"
+              ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
+              <svg class="w-6 h-6 mx-auto text-gray-300 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <p class="text-xs text-gray-400">Arrastra archivos o haz clic para subir</p>
+              <input type="file" id="fileInput" multiple class="hidden" onchange="handleFiles(event)" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" />
+            </div>
+            <div id="archivosPendientes" class="mt-2 space-y-1"></div>
+            <div id="evidenciasExistentes" class="mt-2 space-y-1"></div>
+          </div>
+
+          <div class="flex gap-2 pt-1">
+            <button type="submit" class="flex-1 bg-indigo-600 text-white text-sm font-medium py-2.5 rounded-xl hover:bg-indigo-700 transition-colors">
+              Guardar
+            </button>
+            <button type="button" onclick="cerrarModal()" class="px-4 py-2.5 border border-gray-200 text-sm text-gray-600 rounded-xl hover:bg-gray-50">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 hidden">
+    <div id="toastMsg" class="bg-gray-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg fade-in"></div>
+  </div>
+
+  <script>
+    // ─── CONFIG SUPABASE ───────────────────────────────────────────────────────
+    const SUPABASE_URL = 'https://sntwcaaqoaymwtdwogzx.supabase.co'
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNudHdjYWFxb2F5bXd0ZHdvZ3p4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNzM5ODYsImV4cCI6MjA4ODc0OTk4Nn0.Bco-qyoDISfRej3ND-v_dtHWSOAr8EqjMnAmSkrGzi8'
+    const { createClient } = supabase
+    const db = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+    // ─── ESTADO GLOBAL ─────────────────────────────────────────────────────────
+    let fechaActual = new Date().toISOString().split('T')[0]
+    let bloques = []
+    let actividades = []
+    let archivosPendientes = []
+
+    const AREAS = {
+      1: { nombre: 'Atención a Clientes', color: '#3B82F6', bg: 'bg-blue-50', border: 'border-blue-200', badge: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' },
+      2: { nombre: 'Dirección General',   color: '#8B5CF6', bg: 'bg-purple-50', border: 'border-purple-200', badge: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' },
+      3: { nombre: 'Reclutamiento',        color: '#10B981', bg: 'bg-emerald-50', border: 'border-emerald-200', badge: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
+    }
+
+    // ─── FECHA ─────────────────────────────────────────────────────────────────
+    function cambiarFecha(dias) {
+      const d = new Date(fechaActual + 'T12:00:00')
+      d.setDate(d.getDate() + dias)
+      fechaActual = d.toISOString().split('T')[0]
+      cargarDia()
+    }
+
+    function irHoy() {
+      fechaActual = new Date().toISOString().split('T')[0]
+      cargarDia()
+    }
+
+    function mostrarFecha() {
+      const d = new Date(fechaActual + 'T12:00:00')
+      const hoy = new Date().toISOString().split('T')[0]
+      const opciones = { weekday: 'long', day: 'numeric', month: 'long' }
+      let texto = d.toLocaleDateString('es-MX', opciones)
+      texto = texto.charAt(0).toUpperCase() + texto.slice(1)
+      if (fechaActual === hoy) texto += ' · Hoy'
+      document.getElementById('fechaDisplay').textContent = texto
+    }
+
+    // ─── CARGA PRINCIPAL ───────────────────────────────────────────────────────
+    async function cargarDia() {
+      mostrarFecha()
+      document.getElementById('bloquesContainer').innerHTML = `
+        <div class="text-center py-12 text-gray-400">
+          <svg class="w-8 h-8 mx-auto mb-2 opacity-50 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Cargando...
+        </div>`
+
+      // Cargar bloques y actividades en paralelo
+      const [{ data: bloquesData }, { data: actData }, { data: rolloverData }] = await Promise.all([
+        db.from('bloques_horario').select('*, areas(*)').order('hora_inicio'),
+        db.from('actividades').select('*, areas(*), evidencias(*)').eq('fecha_programada', fechaActual).order('created_at'),
+        db.from('actividades').select('*, areas(*), evidencias(*)').eq('completada', false).lt('fecha_programada', fechaActual).order('fecha_programada')
+      ])
+
+      bloques = bloquesData || []
+      actividades = actData || []
+
+      renderResumen()
+      renderRollover(rolloverData || [])
+      renderBloques()
+    }
+
+    // ─── RESUMEN ÁREAS ─────────────────────────────────────────────────────────
+    function renderResumen() {
+      const totales = { 1: { total: 0, ok: 0 }, 2: { total: 0, ok: 0 }, 3: { total: 0, ok: 0 } }
+      actividades.forEach(a => {
+        if (a.area_id && totales[a.area_id]) {
+          totales[a.area_id].total++
+          if (a.completada) totales[a.area_id].ok++
+        }
+      })
+
+      const areas = [
+        { id: 1, nombre: 'Atención a Clientes', mins: 180 },
+        { id: 2, nombre: 'Dirección General', mins: 120 },
+        { id: 3, nombre: 'Reclutamiento', mins: 60 },
+      ]
+
+      document.getElementById('resumenAreas').innerHTML = areas.map(a => {
+        const cfg = AREAS[a.id]
+        const { total, ok } = totales[a.id]
+        const pct = total > 0 ? Math.round((ok / total) * 100) : 0
+        return `
+          <div class="bg-white rounded-xl border ${cfg.border} p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-2.5 h-2.5 rounded-full ${cfg.dot}"></div>
+              <span class="text-xs font-medium text-gray-600">${a.nombre}</span>
+            </div>
+            <div class="flex items-end justify-between">
+              <div>
+                <p class="text-2xl font-bold text-gray-900">${ok}<span class="text-sm font-normal text-gray-400">/${total}</span></p>
+                <p class="text-xs text-gray-400">${a.mins / 60}h asignadas</p>
+              </div>
+              <div class="w-10 h-10 relative">
+                <svg class="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
+                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f3f4f6" stroke-width="3"/>
+                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="${cfg.color}" stroke-width="3"
+                    stroke-dasharray="${pct} ${100 - pct}" stroke-linecap="round"/>
+                </svg>
+                <span class="absolute inset-0 flex items-center justify-center text-xs font-semibold text-gray-700">${pct}%</span>
+              </div>
+            </div>
+          </div>`
+      }).join('')
+    }
+
+    // ─── ROLLOVER ──────────────────────────────────────────────────────────────
+    function renderRollover(pendientes) {
+      const section = document.getElementById('rolloverSection')
+      if (pendientes.length === 0) { section.style.display = 'none'; return }
+      section.style.display = 'block'
+      document.getElementById('rolloverList').innerHTML = pendientes.map(a => {
+        const cfg = AREAS[a.area_id] || {}
+        return `
+          <div class="flex items-start gap-3 bg-white rounded-lg px-3 py-2.5 border border-amber-100">
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-800 truncate">${a.titulo}</p>
+              <p class="text-xs text-gray-400">${a.fecha_programada} · <span class="${cfg.badge || ''} px-1.5 py-0.5 rounded text-xs">${a.areas?.nombre || ''}</span></p>
+            </div>
+            <div class="flex gap-1 shrink-0">
+              <button onclick="pasarAHoy(${a.id})" title="Mover a hoy" class="text-xs bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg hover:bg-indigo-100 font-medium">→ Hoy</button>
+              <button onclick="marcarCompletada(${a.id}, true)" title="Marcar como completada" class="text-xs bg-emerald-50 text-emerald-600 px-2 py-1 rounded-lg hover:bg-emerald-100 font-medium">✓</button>
+            </div>
+          </div>`
+      }).join('')
+    }
+
+    // ─── BLOQUES ───────────────────────────────────────────────────────────────
+    function renderBloques() {
+      const horaActual = new Date().toTimeString().slice(0, 5)
+      const eHoy = fechaActual === new Date().toISOString().split('T')[0]
+
+      document.getElementById('bloquesContainer').innerHTML = bloques.map(b => {
+        if (b.tipo === 'pausa') return renderPausa(b)
+
+        const cfg = AREAS[b.area_id] || {}
+        const actsBloque = actividades.filter(a => a.bloque_id === b.id)
+        const esActivo = eHoy && horaActual >= b.hora_inicio.slice(0,5) && horaActual < b.hora_fin.slice(0,5)
+
+        return `
+          <div class="bg-white rounded-2xl border ${cfg.border || 'border-gray-200'} overflow-hidden ${esActivo ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}">
+            <!-- Cabecera bloque -->
+            <div class="flex items-center justify-between px-5 py-3.5 ${cfg.bg || 'bg-gray-50'} border-b ${cfg.border || 'border-gray-200'}">
+              <div class="flex items-center gap-3">
+                <div class="w-2.5 h-2.5 rounded-full ${cfg.dot || 'bg-gray-400'}"></div>
+                <div>
+                  <span class="text-sm font-semibold text-gray-800">${b.areas?.nombre || 'Sin área'}</span>
+                  ${esActivo ? '<span class="ml-2 text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-medium">● Ahora</span>' : ''}
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-xs text-gray-400 font-mono">${b.hora_inicio.slice(0,5)} – ${b.hora_fin.slice(0,5)}</span>
+                <button onclick="abrirModal(${b.id}, ${b.area_id})"
+                  class="flex items-center gap-1 text-xs bg-white border ${cfg.border || 'border-gray-200'} text-gray-600 px-2.5 py-1.5 rounded-lg hover:shadow-sm transition font-medium">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                  Agregar
+                </button>
+              </div>
+            </div>
+
+            <!-- Actividades -->
+            <div class="divide-y divide-gray-50" id="lista-bloque-${b.id}">
+              ${actsBloque.length === 0
+                ? `<p class="text-xs text-gray-300 px-5 py-4 text-center">Sin actividades — haz clic en Agregar</p>`
+                : actsBloque.map(a => renderActividad(a, cfg)).join('')
+              }
+            </div>
+          </div>`
+      }).join('')
+    }
+
+    function renderPausa(b) {
+      const labels = { '10:30:00': 'Pausa corta', '12:00:00': 'Almuerzo', '14:30:00': 'Pausa corta', '15:30:00': 'Pausa corta', '16:45:00': 'Cierre del día' }
+      const label = labels[b.hora_inicio] || 'Pausa'
+      return `
+        <div class="flex items-center gap-3 px-5 py-2">
+          <div class="flex-1 h-px bg-gray-200"></div>
+          <span class="text-xs text-gray-400 font-medium shrink-0">${b.hora_inicio.slice(0,5)} · ${label}</span>
+          <div class="flex-1 h-px bg-gray-200"></div>
+        </div>`
+    }
+
+    function renderActividad(a, cfg) {
+      const prioColors = { alta: 'text-red-500', media: 'text-gray-400', baja: 'text-emerald-500' }
+      const tieneEvidencias = a.evidencias && a.evidencias.length > 0
+      return `
+        <div class="flex items-start gap-3 px-5 py-3.5 hover:bg-gray-50 group transition-colors ${a.completada ? 'opacity-60' : ''}">
+          <button onclick="marcarCompletada(${a.id}, ${!a.completada})" class="mt-0.5 shrink-0">
+            <div class="w-5 h-5 rounded-full border-2 ${a.completada ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 hover:border-emerald-400'} flex items-center justify-center transition-colors">
+              ${a.completada ? '<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>' : ''}
+            </div>
+          </button>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-800 ${a.completada ? 'line-through' : ''}">${a.titulo}</p>
+            ${a.descripcion ? `<p class="text-xs text-gray-500 mt-0.5 truncate">${a.descripcion}</p>` : ''}
+            ${a.notas ? `<p class="text-xs text-indigo-500 mt-0.5 truncate">💬 ${a.notas}</p>` : ''}
+            ${tieneEvidencias ? `
+              <div class="flex gap-1 mt-1.5 flex-wrap">
+                ${a.evidencias.map(e => `
+                  <a href="${e.url}" target="_blank" class="flex items-center gap-1 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded hover:bg-gray-200 transition">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                    ${e.nombre_archivo}
+                  </a>`).join('')}
+              </div>` : ''}
+          </div>
+          <div class="flex items-center gap-1 shrink-0">
+            ${a.prioridad === 'alta' ? '<span class="text-red-400 text-xs">🔴</span>' : ''}
+            <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onclick="abrirModalEditar(${a.id})" class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+              </button>
+              <button onclick="moverSiguienteDia(${a.id})" title="Mover al siguiente día" class="p-1.5 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-500">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              </button>
+              <button onclick="eliminarActividad(${a.id})" class="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-400">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>`
+    }
+
+    // ─── MODAL ─────────────────────────────────────────────────────────────────
+    function abrirModal(bloqueId, areaId) {
+      document.getElementById('actividadId').value = ''
+      document.getElementById('actividadBloqueId').value = bloqueId
+      document.getElementById('actividadAreaId').value = areaId
+      document.getElementById('actividadTitulo').value = ''
+      document.getElementById('actividadDescripcion').value = ''
+      document.getElementById('actividadEstado').value = 'pendiente'
+      document.getElementById('actividadPrioridad').value = 'media'
+      document.getElementById('actividadNotas').value = ''
+      document.getElementById('archivosPendientes').innerHTML = ''
+      document.getElementById('evidenciasExistentes').innerHTML = ''
+      document.getElementById('modalTitulo').textContent = 'Nueva actividad'
+      archivosPendientes = []
+      document.getElementById('modalOverlay').classList.remove('hidden')
+      setTimeout(() => document.getElementById('actividadTitulo').focus(), 100)
+    }
+
+    async function abrirModalEditar(actId) {
+      const a = actividades.find(x => x.id === actId)
+      if (!a) return
+      document.getElementById('actividadId').value = a.id
+      document.getElementById('actividadBloqueId').value = a.bloque_id || ''
+      document.getElementById('actividadAreaId').value = a.area_id || ''
+      document.getElementById('actividadTitulo').value = a.titulo
+      document.getElementById('actividadDescripcion').value = a.descripcion || ''
+      document.getElementById('actividadEstado').value = a.completada ? 'completada' : 'pendiente'
+      document.getElementById('actividadPrioridad').value = a.prioridad || 'media'
+      document.getElementById('actividadNotas').value = a.notas || ''
+      document.getElementById('modalTitulo').textContent = 'Editar actividad'
+      archivosPendientes = []
+      document.getElementById('archivosPendientes').innerHTML = ''
+
+      // Mostrar evidencias existentes
+      const evEl = document.getElementById('evidenciasExistentes')
+      if (a.evidencias && a.evidencias.length > 0) {
+        evEl.innerHTML = '<p class="text-xs text-gray-500 mb-1">Evidencias existentes:</p>' +
+          a.evidencias.map(e => `
+            <div class="flex items-center gap-2 text-xs bg-gray-50 rounded-lg px-2 py-1.5">
+              <span class="flex-1 truncate text-gray-600">${e.nombre_archivo}</span>
+              <a href="${e.url}" target="_blank" class="text-indigo-500 hover:underline">Ver</a>
+              <button onclick="eliminarEvidencia(${e.id})" class="text-red-400 hover:text-red-600">✕</button>
+            </div>`).join('')
+      } else {
+        evEl.innerHTML = ''
+      }
+
+      document.getElementById('modalOverlay').classList.remove('hidden')
+      setTimeout(() => document.getElementById('actividadTitulo').focus(), 100)
+    }
+
+    function cerrarModal() {
+      document.getElementById('modalOverlay').classList.add('hidden')
+      archivosPendientes = []
+    }
+
+    // ─── GUARDAR ACTIVIDAD ─────────────────────────────────────────────────────
+    async function guardarActividad(e) {
+      e.preventDefault()
+      const id = document.getElementById('actividadId').value
+      const bloqueId = document.getElementById('actividadBloqueId').value
+      const areaId = document.getElementById('actividadAreaId').value
+      const titulo = document.getElementById('actividadTitulo').value.trim()
+      const descripcion = document.getElementById('actividadDescripcion').value.trim()
+      const completada = document.getElementById('actividadEstado').value === 'completada'
+      const prioridad = document.getElementById('actividadPrioridad').value
+      const notas = document.getElementById('actividadNotas').value.trim()
+
+      const payload = {
+        titulo, descripcion, completada, prioridad,
+        notas: notas || null,
+        area_id: areaId ? parseInt(areaId) : null,
+        bloque_id: bloqueId ? parseInt(bloqueId) : null,
+        fecha: fechaActual,
+        fecha_programada: fechaActual,
+      }
+
+      let actividadId = id
+
+      if (id) {
+        await db.from('actividades').update(payload).eq('id', id)
+        mostrarToast('Actividad actualizada ✓')
+      } else {
+        const { data } = await db.from('actividades').insert(payload).select().single()
+        actividadId = data?.id
+        mostrarToast('Actividad guardada ✓')
+      }
+
+      // Subir archivos pendientes
+      if (archivosPendientes.length > 0 && actividadId) {
+        await subirEvidencias(actividadId)
+      }
+
+      cerrarModal()
+      cargarDia()
+    }
+
+    // ─── ESTADOS ───────────────────────────────────────────────────────────────
+    async function marcarCompletada(id, estado) {
+      await db.from('actividades').update({ completada: estado }).eq('id', id)
+      mostrarToast(estado ? '✅ Completada' : '⏳ Marcada como pendiente')
+      cargarDia()
+    }
+
+    async function moverSiguienteDia(id) {
+      const a = actividades.find(x => x.id === id)
+      if (!a) return
+      const d = new Date(fechaActual + 'T12:00:00')
+      d.setDate(d.getDate() + 1)
+      const siguiente = d.toISOString().split('T')[0]
+      await db.from('actividades').update({ fecha_programada: siguiente, es_rollover: true }).eq('id', id)
+      mostrarToast('Movida al día siguiente →')
+      cargarDia()
+    }
+
+    async function pasarAHoy(id) {
+      await db.from('actividades').update({ fecha_programada: fechaActual, es_rollover: true }).eq('id', id)
+      mostrarToast('Movida a hoy ✓')
+      cargarDia()
+    }
+
+    async function eliminarActividad(id) {
+      if (!confirm('¿Eliminar esta actividad?')) return
+      await db.from('actividades').delete().eq('id', id)
+      mostrarToast('Actividad eliminada')
+      cargarDia()
+    }
+
+    // ─── EVIDENCIAS ────────────────────────────────────────────────────────────
+    function handleFiles(e) { agregarArchivos(Array.from(e.target.files)) }
+    function dragOver(e) { e.preventDefault(); document.getElementById('dropZone').classList.add('drag-over') }
+    function dragLeave(e) { document.getElementById('dropZone').classList.remove('drag-over') }
+    function dropFile(e) {
+      e.preventDefault()
+      document.getElementById('dropZone').classList.remove('drag-over')
+      agregarArchivos(Array.from(e.dataTransfer.files))
+    }
+
+    function agregarArchivos(files) {
+      archivosPendientes = [...archivosPendientes, ...files]
+      const el = document.getElementById('archivosPendientes')
+      el.innerHTML = archivosPendientes.map((f, i) => `
+        <div class="flex items-center gap-2 text-xs bg-indigo-50 rounded-lg px-2 py-1.5">
+          <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+          <span class="flex-1 truncate text-indigo-700">${f.name}</span>
+          <span class="text-indigo-400">${(f.size / 1024).toFixed(0)}kb</span>
+          <button onclick="quitarArchivo(${i})" class="text-red-400 hover:text-red-600 font-bold">✕</button>
+        </div>`).join('')
+    }
+
+    function quitarArchivo(i) {
+      archivosPendientes.splice(i, 1)
+      agregarArchivos([])
+    }
+
+    async function subirEvidencias(actividadId) {
+      for (const file of archivosPendientes) {
+        const ext = file.name.split('.').pop()
+        const path = `${actividadId}/${Date.now()}_${file.name}`
+        const { data, error } = await db.storage.from('evidencias').upload(path, file, { upsert: true })
+        if (!error) {
+          const { data: urlData } = db.storage.from('evidencias').getPublicUrl(path)
+          await db.from('evidencias').insert({
+            actividad_id: actividadId,
+            nombre_archivo: file.name,
+            url: urlData.publicUrl,
+            tipo: file.type,
+          })
+        }
+      }
+    }
+
+    async function eliminarEvidencia(evidenciaId) {
+      await db.from('evidencias').delete().eq('id', evidenciaId)
+      mostrarToast('Evidencia eliminada')
+      cargarDia()
+      // Reabrir con datos actualizados
+    }
+
+    // ─── TOAST ─────────────────────────────────────────────────────────────────
+    let toastTimer
+    function mostrarToast(msg) {
+      clearTimeout(toastTimer)
+      const t = document.getElementById('toast')
+      document.getElementById('toastMsg').textContent = msg
+      t.classList.remove('hidden')
+      toastTimer = setTimeout(() => t.classList.add('hidden'), 2500)
+    }
+
+    // ─── VISTA ─────────────────────────────────────────────────────────────────
+    let vista = 'dia' // 'dia' | 'semana'
+
+    function setVista(v) {
+      vista = v
+      document.getElementById('btnVistaDia').className    = v === 'dia'    ? 'text-xs font-medium px-3 py-1.5 rounded-md transition-all bg-white text-gray-800 shadow-sm' : 'text-xs font-medium px-3 py-1.5 rounded-md transition-all text-gray-500'
+      document.getElementById('btnVistaSemana').className = v === 'semana' ? 'text-xs font-medium px-3 py-1.5 rounded-md transition-all bg-white text-gray-800 shadow-sm' : 'text-xs font-medium px-3 py-1.5 rounded-md transition-all text-gray-500'
+
+      document.getElementById('vistaSemana').classList.toggle('hidden', v !== 'semana')
+      document.getElementById('resumenAreas').parentElement.classList.toggle('hidden', v === 'semana')
+      document.getElementById('rolloverSection').classList.toggle('hidden', v === 'semana')
+      document.getElementById('bloquesContainer').classList.toggle('hidden', v === 'semana')
+
+      if (v === 'semana') cargarSemana()
+    }
+
+    // ─── SEMANA ────────────────────────────────────────────────────────────────
+    function getLunes(fecha) {
+      const d = new Date(fecha + 'T12:00:00')
+      const dia = d.getDay()
+      const diff = dia === 0 ? -6 : 1 - dia
+      d.setDate(d.getDate() + diff)
+      return d.toISOString().split('T')[0]
+    }
+
+    function diasDeSemana(lunes) {
+      return Array.from({ length: 5 }, (_, i) => {
+        const d = new Date(lunes + 'T12:00:00')
+        d.setDate(d.getDate() + i)
+        return d.toISOString().split('T')[0]
+      })
+    }
+
+    async function cargarSemana() {
+      const lunes = getLunes(fechaActual)
+      const dias = diasDeSemana(lunes)
+      const desde = dias[0]
+      const hasta = dias[4]
+
+      const { data: actsData } = await db.from('actividades')
+        .select('*, areas(*)')
+        .gte('fecha_programada', desde)
+        .lte('fecha_programada', hasta)
+        .order('fecha_programada')
+
+      const acts = actsData || []
+      renderSemana(dias, acts)
+
+      // Mostrar detalle del día activo en la semana
+      const actsDia = acts.filter(a => a.fecha_programada === fechaActual)
+      renderSemanaDetalle(actsDia)
+    }
+
+    function renderSemana(dias, acts) {
+      const hoy = new Date().toISOString().split('T')[0]
+      const DIAS_LABEL = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
+
+      document.getElementById('semanaGrid').innerHTML = dias.map((fecha, i) => {
+        const actsDia = acts.filter(a => a.fecha_programada === fecha)
+        const total = actsDia.length
+        const ok = actsDia.filter(a => a.completada).length
+        const esHoy = fecha === hoy
+        const esActivo = fecha === fechaActual
+        const pct = total > 0 ? Math.round((ok / total) * 100) : null
+
+        // Barras de áreas
+        const barras = [1, 2, 3].map(areaId => {
+          const n = actsDia.filter(a => a.area_id === areaId).length
+          const cfg = AREAS[areaId]
+          return n > 0 ? `<div class="h-1 rounded-full ${cfg.dot} opacity-70" style="width:${Math.min(n * 20, 100)}%"></div>` : ''
+        }).filter(Boolean).join('')
+
+        const dia = new Date(fecha + 'T12:00:00')
+        const numDia = dia.getDate()
+
+        return `
+          <button onclick="irAFecha('${fecha}')"
+            class="flex flex-col items-center py-4 px-2 hover:bg-gray-50 transition-colors relative ${esActivo ? 'bg-indigo-50' : ''}">
+            ${esHoy ? '<div class="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-indigo-500"></div>' : ''}
+            <span class="text-xs font-medium text-gray-400 mb-1">${DIAS_LABEL[i]}</span>
+            <span class="text-xl font-bold ${esHoy ? 'text-indigo-600' : esActivo ? 'text-indigo-500' : 'text-gray-800'} mb-2">${numDia}</span>
+            ${total > 0 ? `
+              <div class="text-center mb-2">
+                <span class="text-xs font-semibold text-gray-700">${ok}</span>
+                <span class="text-xs text-gray-400">/${total}</span>
+              </div>
+              ${pct !== null ? `
+                <div class="w-full bg-gray-100 rounded-full h-1.5 mb-2">
+                  <div class="h-1.5 rounded-full bg-emerald-400 transition-all" style="width:${pct}%"></div>
+                </div>` : ''}
+              <div class="flex flex-col gap-0.5 w-full px-1">${barras}</div>
+            ` : `<span class="text-xs text-gray-300">—</span>`}
+          </button>`
+      }).join('')
+    }
+
+    function renderSemanaDetalle(acts) {
+      const el = document.getElementById('semanaDetalle')
+      const d = new Date(fechaActual + 'T12:00:00')
+      const label = d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })
+
+      if (acts.length === 0) {
+        el.innerHTML = `
+          <div class="text-center py-8 text-gray-300">
+            <p class="text-sm font-medium">${label.charAt(0).toUpperCase() + label.slice(1)}</p>
+            <p class="text-xs mt-1">Sin actividades registradas</p>
+            <button onclick="setVista('dia')" class="mt-3 text-xs bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-medium">+ Agregar actividades</button>
+          </div>`
+        return
+      }
+
+      const porArea = {}
+      acts.forEach(a => {
+        const key = a.area_id || 0
+        if (!porArea[key]) porArea[key] = []
+        porArea[key].push(a)
+      })
+
+      el.innerHTML = `
+        <div class="flex items-center justify-between mb-1 px-1">
+          <p class="text-sm font-semibold text-gray-700">${label.charAt(0).toUpperCase() + label.slice(1)}</p>
+          <button onclick="setVista('dia')" class="text-xs text-indigo-500 hover:underline">Ver detalle →</button>
+        </div>` +
+        Object.entries(porArea).map(([areaId, items]) => {
+          const cfg = AREAS[areaId] || { bg: 'bg-gray-50', border: 'border-gray-200', dot: 'bg-gray-400', badge: '' }
+          return `
+            <div class="bg-white rounded-xl border ${cfg.border} overflow-hidden">
+              <div class="flex items-center gap-2 px-4 py-2.5 ${cfg.bg} border-b ${cfg.border}">
+                <div class="w-2 h-2 rounded-full ${cfg.dot}"></div>
+                <span class="text-xs font-semibold text-gray-700">${items[0].areas?.nombre || 'Sin área'}</span>
+                <span class="ml-auto text-xs text-gray-400">${items.filter(a=>a.completada).length}/${items.length}</span>
+              </div>
+              <div class="divide-y divide-gray-50">
+                ${items.map(a => `
+                  <div class="flex items-center gap-3 px-4 py-2.5 ${a.completada ? 'opacity-50' : ''}">
+                    <div class="w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${a.completada ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300'}">
+                      ${a.completada ? '<svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>' : ''}
+                    </div>
+                    <span class="text-sm text-gray-700 ${a.completada ? 'line-through' : ''}">${a.titulo}</span>
+                    ${a.prioridad === 'alta' ? '<span class="ml-auto text-xs">🔴</span>' : ''}
+                  </div>`).join('')}
+              </div>
+            </div>`
+        }).join('')
+    }
+
+    function irAFecha(fecha) {
+      fechaActual = fecha
+      mostrarFecha()
+      if (vista === 'semana') {
+        cargarSemana()
+      } else {
+        cargarDia()
+      }
+    }
+
+    // ─── INIT ──────────────────────────────────────────────────────────────────
+    cargarDia()
+  </script>
+</body>
+</html>
